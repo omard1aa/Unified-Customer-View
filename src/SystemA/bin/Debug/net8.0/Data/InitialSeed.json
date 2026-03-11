@@ -1,0 +1,38 @@
+[
+    {
+        "id": "legacy_001",
+        "email": "max.mustermann@example.de",
+        "name": "Max Mustermann",
+        "address": "Sonnenallee 1, 12345 Berlin",
+        "contract_start_date": "2021-03-15",
+        "contract_type": "RENTAL",
+        "last_updated": "2024-11-01T10:00:00Z"
+    },
+    {
+        "id": "legacy_002",
+        "email": "erika.muster@example.de",
+        "name": "Erika Musterfrau",
+        "address": "Hauptstr. 42, 10115 Berlin",
+        "contract_start_date": "2022-07-01",
+        "contract_type": "PURCHASE",
+        "last_updated": "2024-08-15T14:30:00Z"
+    },
+    {
+        "id": "legacy_003",
+        "email": "jan.schmidt@example.de",
+        "name": "Jan Schmidt",
+        "address": "Berliner Str. 10, 80331 Munich",
+        "contract_start_date": "2023-01-10",
+        "contract_type": "RENTAL",
+        "last_updated": "2024-06-20T09:00:00Z"
+    },
+    {
+        "id": "legacy_004",
+        "email": "sophie.mueller@example.de",
+        "name": "Sophie Muller",
+        "address": "Kastanienallee 7, 10435 Berlin",
+        "contract_start_date": "2023-09-01",
+        "contract_type": "RENTAL",
+        "last_updated": "2024-10-05T16:00:00Z"
+    }
+]

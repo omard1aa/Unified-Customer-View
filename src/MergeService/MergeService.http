@@ -1,0 +1,6 @@
+@MergeService_HostAddress = http://localhost:5181
+
+GET {{MergeService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
