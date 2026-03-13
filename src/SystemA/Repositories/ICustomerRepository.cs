@@ -6,6 +6,6 @@ namespace SystemA.Repositories
     {
         Task<Customer?> GetCustomerByEmailAsync(string email);
         Task<IEnumerable<Customer>> SearchCustomersAsync(string query);
-        Task CheckHealthAsync();
+        Task<bool> CheckHealthAsync();
     }
 }

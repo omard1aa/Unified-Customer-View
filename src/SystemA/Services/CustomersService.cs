@@ -23,16 +23,12 @@ namespace SystemA.Services
 
         public async Task<bool> IsHealthyAsync()
         {
-            try
-            {
-                await repository.CheckHealthAsync();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Health check failed.");
-                return false;
-            }
+                var healthy = await repository.CheckHealthAsync();
+                if (healthy)
+                    logger.LogInformation("Health check passed successfully.");
+                else
+                    logger.LogWarning("Health check failed.");
+                return healthy;
         }
     }
 }

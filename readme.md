@@ -38,7 +38,7 @@ The system also includes conflict detection with provenance tracking to record t
 - Docker & docker compose up
 
 ## Getting Started
-- '''docker compose up'''. the service runs on https://localhost:5000
+  `docker compose up`. the service runs on https://localhost:5000
 - A Postman collection is included at /docs/UnifiedView.json
 
 ## API Endpoints
@@ -48,7 +48,7 @@ The system also includes conflict detection with provenance tracking to record t
 - GET /health -  check connectivity health of both data sources
 
 
-## Questions to be discussed
+## Assumptions
 - what forced us to have a new system B?
 - Why we are not able to run a script to copy the data from A to B, so we deal only with system B?
   - we don't have control over posting/updating records to system B? 

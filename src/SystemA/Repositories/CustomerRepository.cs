@@ -20,9 +20,17 @@ namespace SystemA.Repositories
                 .ToListAsync();
         }
 
-        public async Task CheckHealthAsync()
+        public async Task<bool> CheckHealthAsync()
         {
-            // Implementation for checking health
+            try
+            {
+                return await db.Database.CanConnectAsync();
+                
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Database connection failed.", ex);
+            }
         }
     }
 }
