@@ -12,80 +12,51 @@ namespace MergeService.Services
         ILogger<CustomersService> _logger;
         public CustomersService(SystemAClient systemAClient, SystemBClient systemBClient, ILogger<CustomersService> logger)
         {
-            this._systemAClient = systemAClient;
-            this._systemBClient = systemBClient;
-            this._logger = logger;
+            _systemAClient = systemAClient;
+            _systemBClient = systemBClient;
+            _logger = logger;
         }
         public async Task<UnifiedCustomerRecord?> GetUnifiedCustomerByEmailAsync(string email)
         {
-            var unifiedCustomerRecord = new UnifiedCustomerRecord { Id = Guid.NewGuid().ToString() };
             _logger.LogInformation("[MergeService] Getting customer by email: {Email}", email);
+            
+            SystemACustomer? systemACustomer = await _systemAClient.GetByEmailAsync<SystemACustomer>(email);
+            SystemBCustomer? systemBCustomer = null;
+            bool systemBUnavailable = false;
             try
             {
-                var systemACustomer = await _systemAClient.GetByEmailAsync<SystemACustomer>(email);
-                var systemBCustomer = await _systemBClient.GetByEmailAsync<SystemBCustomer>(email);
-                if (systemACustomer == null && systemBCustomer == null)
-                {
-                    _logger.LogWarning($"[MergeService] No customer found with email: {email}");
-                    return null;
-                }
-
-                // If SystemB is unavailable, we want to migrate from SystemA to unified view
-                if(systemACustomer != null && systemBCustomer == null)
-                {
-                    _logger.LogInformation($"[MergeService] Customer found only in systemA: {JsonSerializer.Serialize(systemACustomer)} for email: {email}");
-                    
-                    // Migrate only from systemA to unified view, as SystemA is unavailable
-                    unifiedCustomerRecord = MergeFromSystemA(systemACustomer);
-                    
-                    return unifiedCustomerRecord;
-                }
-
-                // If SystemA is unavailable, we want to migrate from SystemB to unified view
-                if(systemACustomer == null && systemBCustomer != null)
-                {
-                    _logger.LogInformation($"[MergeService] Customer found only in systemB: {JsonSerializer.Serialize(systemBCustomer)} for email: {email}");
-                    
-                    // Migrate only from systemB to unified view, as System B is unavailable
-                    unifiedCustomerRecord = MergeFromSystemB(systemBCustomer);
-                    
-                    return unifiedCustomerRecord;
-                }
-
-                // if both systems are available we want to merge from both, and resolve conflicts if needed
-                if (systemACustomer != null && systemBCustomer != null)
-                {
-                    unifiedCustomerRecord = MergeFromBoth(systemACustomer!, systemBCustomer!);
-                }
-
-                _logger.LogInformation("[MergeService] Successfully merged customer record for email: {Email} (partial: {IsPartial})", email, unifiedCustomerRecord.Metadata.isPartial);
-                return unifiedCustomerRecord;
+                systemBCustomer = await _systemBClient.GetByEmailAsync<SystemBCustomer>(email);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "[MergeService] SystemB unavailable, proceeding with SystemA only.");
-                throw ex;
+                _logger.LogWarning(ex, "[MergeService] SystemB unavailable for {Email}", email);
+                systemBUnavailable = true;
             }
+
+            // Neither system has this customer
+            if (systemACustomer == null && systemBCustomer == null && !systemBUnavailable)
+                return null;
+
+            // Both systems have data
+            if (systemACustomer != null && systemBCustomer != null)
+                return MergeFromBoth(systemACustomer, systemBCustomer);
+
+            // Only System A
+            if (systemACustomer != null)
+                return MergeFromSystemA(systemACustomer, isPartial: systemBUnavailable);
+
+            // Only System B
+            if (systemBCustomer != null)
+                return MergeFromSystemB(systemBCustomer, false);
+
+            return null;
         }
 
-        public UnifiedCustomerRecord ResolveConflict(SystemACustomer systemACustomer, SystemBCustomer systemBCustomer)
-        {
-            var resolvedCustomerRecord = new UnifiedCustomerRecord()
-            {
-                Id = new Guid().ToString(), 
-                SystemAId = systemACustomer.Id, 
-                SystemBuuid = systemBCustomer.uuid
-            };
-
-
-            return resolvedCustomerRecord;
-        }
-
-        public UnifiedCustomerRecord MergeFromSystemA(SystemACustomer systemACustomer)
+        public UnifiedCustomerRecord MergeFromSystemA(SystemACustomer systemACustomer, bool isPartial)
         {
             var mergedCustomerRecord = new UnifiedCustomerRecord()
             {
-                Id = new Guid().ToString(),
+                Id = Guid.NewGuid().ToString(),
                 SystemAId = systemACustomer.Id,
                 email = systemACustomer.email,
                 name = systemACustomer.name,
@@ -96,17 +67,18 @@ namespace MergeService.Services
                 Metadata = new MetaData
                 { 
                     sources = new Dictionary<string, string> { { "all", "System A" } },
-                    isPartial = false
-                }            };
+                    isPartial = isPartial
+                }            
+            };
 
             return mergedCustomerRecord;
         }
 
-        public UnifiedCustomerRecord MergeFromSystemB(SystemBCustomer systemBCustomer)
+        public UnifiedCustomerRecord MergeFromSystemB(SystemBCustomer systemBCustomer, bool isPartial)
         {
             var mergedCustomerRecord = new UnifiedCustomerRecord()
             {
-                Id = new Guid().ToString(),
+                Id = Guid.NewGuid().ToString(),
                 SystemBuuid = systemBCustomer.uuid,
                 email = systemBCustomer.email,
                 name = systemBCustomer.name,
@@ -116,10 +88,9 @@ namespace MergeService.Services
                 Metadata = new MetaData
                 { 
                     sources = new Dictionary<string, string> { { "all", "System B" } },
-                    isPartial = false
+                    isPartial = isPartial
                 }
             };
-
             return mergedCustomerRecord;
         }
     
@@ -127,29 +98,82 @@ namespace MergeService.Services
         {
             var mergedCustomerRecord = new UnifiedCustomerRecord()
             {
-                Id = new Guid().ToString(),
-                phone = systemBCustomer.phone,
-                ContractStartDate = systemACustomer.ContractStartDate,
-                ContractType = systemACustomer.ContractType,
+                Id = Guid.NewGuid().ToString(),
+                SystemAId = systemACustomer.Id,
+                SystemBuuid = systemBCustomer.uuid,
+                email = systemACustomer.email,
+                name = systemACustomer.name,           // default to A
+                phone = systemBCustomer.phone,          // always from B
+                address = systemBCustomer.address,      // from B (higher priority)
+                ContractStartDate = systemACustomer.ContractStartDate,  // always from A
+                ContractType = systemACustomer.ContractType,  // always from A
+                Metadata = new MetaData
+                {
+                    sources = new Dictionary<string, string>
+                    {
+                        { "name", "SystemA" },
+                        { "phone", "SystemB" },
+                        { "address", "SystemB" },
+                        { "contractStartDate", "SystemA" },
+                        { "contractType", "SystemA" }
+                    },                    
+                    conflicts = new List<Dictionary<string, string>>(),
+                    isPartial = false
+                },
+                last_updated = systemBCustomer.last_updated > systemACustomer.last_updated 
+                                ? systemBCustomer.last_updated.ToString("o") 
+                                : systemACustomer.last_updated?.ToString("o"),
             };
             if(systemACustomer.name != systemBCustomer.name)
             {
-                string newerSource = systemACustomer.last_updated > systemBCustomer.last_updated ? "SystemA" : "SystemB";
-                mergedCustomerRecord.name = newerSource == "SystemA" ? systemACustomer.name : systemBCustomer.name;
-                mergedCustomerRecord.Metadata = mergedCustomerRecord.Metadata ?? new MetaData();
-                mergedCustomerRecord.Metadata.conflicts = mergedCustomerRecord.Metadata.conflicts ?? new List<Dictionary<string, string>>();
-                mergedCustomerRecord.Metadata.conflicts.Add(new Dictionary<string, string> { {"field", "name" }, { "source", newerSource} });
-
+                mergedCustomerRecord = CreateConflictForName(mergedCustomerRecord, systemACustomer, systemBCustomer);
             }
             if(systemACustomer.address != systemBCustomer.address)
             {
-                mergedCustomerRecord.address =  systemBCustomer.address; // Assuming SystemB is the source of truth for address conflicts
-                mergedCustomerRecord.Metadata = mergedCustomerRecord.Metadata ?? new MetaData();
-                mergedCustomerRecord.Metadata.conflicts = mergedCustomerRecord.Metadata.conflicts ?? new List<Dictionary<string, string>>();
-                mergedCustomerRecord.Metadata.conflicts.Add(new Dictionary<string, string> { {"field", "address" }, { "source", "SystemB"} });
+                mergedCustomerRecord = CreateConflictForAddress(mergedCustomerRecord, systemACustomer, systemBCustomer);
             }
 
             return mergedCustomerRecord;
         }
+    
+        public UnifiedCustomerRecord CreateConflictForAddress(UnifiedCustomerRecord mergedCustomerRecord, SystemACustomer systemACustomer, SystemBCustomer systemBCustomer)
+        {
+            mergedCustomerRecord.Metadata = mergedCustomerRecord.Metadata ?? new MetaData();
+            mergedCustomerRecord.Metadata.conflicts = mergedCustomerRecord.Metadata.conflicts ?? new List<Dictionary<string, string>>();
+            mergedCustomerRecord.Metadata.conflicts.Add(new Dictionary<string, string> 
+            {
+                {"field", "address"},
+                {"systemAValue", systemACustomer.address ?? "null" },
+                {"systemBValue", systemBCustomer.address ?? "null"},
+                {"resolvedFrom", "SystemB" }
+            });
+            mergedCustomerRecord.Metadata.sources = mergedCustomerRecord.Metadata.sources ?? new Dictionary<string, string>();
+            mergedCustomerRecord.Metadata.sources["address"] = "SystemB";
+            return mergedCustomerRecord;
+        }
+    
+        public UnifiedCustomerRecord CreateConflictForName(UnifiedCustomerRecord mergedCustomerRecord, SystemACustomer systemACustomer, SystemBCustomer systemBCustomer)
+        {
+            string newerSource = systemACustomer.last_updated > systemBCustomer.last_updated ? "SystemA" : "SystemB";
+            mergedCustomerRecord.name = newerSource == "SystemA" ? systemACustomer.name : systemBCustomer.name;
+            mergedCustomerRecord.Metadata = mergedCustomerRecord.Metadata ?? new MetaData();
+            mergedCustomerRecord.Metadata.conflicts = mergedCustomerRecord.Metadata.conflicts ?? new List<Dictionary<string, string>>();
+            mergedCustomerRecord.Metadata.conflicts.Add(new Dictionary<string, string> 
+            {
+                {"field", "name"},
+                {"systemAValue", systemACustomer.name ?? "null" },
+                {"systemBValue", systemBCustomer.name ?? "null"},
+                {"resolvedFrom", newerSource }
+            });
+            mergedCustomerRecord.Metadata.sources = mergedCustomerRecord.Metadata.sources ?? new Dictionary<string, string>();
+            mergedCustomerRecord.Metadata.sources["name"] = newerSource;
+            mergedCustomerRecord.Metadata.isPartial = false;
+            return mergedCustomerRecord;
+        }
+        /*
+         For the Conflict Creation methods, we can have enhancement here, make it generic: CreateConflict()
+         and we pass the conflicted field name, at this moment we would need priority rules engine to determine the resolved value, 
+         and we can enhance it to be more dynamic and support more complex rules in the future, but for now we can keep it simple as per the requirements.
+        */    
     }
 }
