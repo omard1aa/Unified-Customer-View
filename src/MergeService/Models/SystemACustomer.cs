@@ -1,6 +1,6 @@
-namespace SystemA.Models
+namespace MergeService.Models
 {
-    public class Customer
+    public class SystemACustomer
     {
         public required string Id { get; set; }
         public string? email { get; set; }

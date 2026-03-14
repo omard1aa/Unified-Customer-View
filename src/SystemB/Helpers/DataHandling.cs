@@ -9,7 +9,7 @@ namespace SystemB.Helpers
         public static async Task<List<Customer>> LoadDataFromJson(string filePath = "Data/SystemBData.json")
         {
             if (!File.Exists(filePath))
-                return new List<Customer>();
+                throw new FileNotFoundException($"Data file not found at path: {filePath}") ;
 
             var json = await File.ReadAllTextAsync(filePath);
             return JsonSerializer.Deserialize<List<Customer>>(json) ?? new List<Customer>();

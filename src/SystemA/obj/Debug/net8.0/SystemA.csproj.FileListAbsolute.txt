@@ -133,3 +133,4 @@
 /Users/omardiaa/Documents/Enpal/UnifiedCustomerView/src/SystemA/bin/Debug/net8.0/runtimes/win-x86/native/e_sqlite3.dll
 /Users/omardiaa/Documents/Enpal/UnifiedCustomerView/src/SystemA/bin/Debug/net8.0/Data/InitialSeed.json
 /Users/omardiaa/Documents/Enpal/UnifiedCustomerView/src/SystemA/bin/Debug/net8.0/Microsoft.EntityFrameworkCore.Sqlite.dll
+/Users/omardiaa/Documents/Enpal/UnifiedCustomerView/src/SystemA/obj/Debug/net8.0/SystemA.sourcelink.json

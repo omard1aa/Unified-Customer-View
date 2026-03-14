@@ -13,7 +13,7 @@ namespace SystemA.Data
             modelBuilder.Entity<Customer>(e =>
             {
                 e.HasKey(c => c.Id);
-                e.Property(c => c.Email).IsRequired(false);
+                e.Property(c => c.email).IsRequired(false);
             });
         }
 

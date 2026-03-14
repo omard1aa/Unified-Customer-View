@@ -27,7 +27,7 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.EnsureCreatedAsync();
+    await db.Database.MigrateAsync();
     await db.SeedAsync(Path.Combine(AppContext.BaseDirectory, "Data", "InitialSeed.json"));
 }
 

@@ -11,7 +11,7 @@ namespace SystemA.Controllers
         public async Task<IActionResult> GetCustomer(string email)
         {
             var customer = await service.GetByEmailAsync(email);
-            if (customer is null) return NotFound();
+            if (customer is null) return NotFound("Customer not found.");
             return Ok(customer);
         }
 

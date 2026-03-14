@@ -8,15 +8,15 @@ namespace SystemA.Repositories
     {
         public async Task<Customer?> GetCustomerByEmailAsync(string email)
         {
-            return await db.Customers.FirstOrDefaultAsync(c => c.Email == email);
+            return await db.Customers.FirstOrDefaultAsync(c => c.email == email);
         }
 
         public async Task<IEnumerable<Customer>> SearchCustomersAsync(string query)
         {
             var lower = query.ToLower();
             return await db.Customers
-                .Where(c => (c.Email != null && c.Email.ToLower().Contains(lower)) ||
-                            (c.Name != null && c.Name.ToLower().Contains(lower)))
+                .Where(c => (c.email != null && c.email.ToLower().Contains(lower)) ||
+                            (c.name != null && c.name.ToLower().Contains(lower)))
                 .ToListAsync();
         }
 
