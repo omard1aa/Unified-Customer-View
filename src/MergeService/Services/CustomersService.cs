@@ -1,26 +1,33 @@
-using MergeService.Clients;
 using MergeService.Models;
 using MergeService.Interfaces;
-using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace MergeService.Services
 {
     public class CustomersService : ICustomerService
     {
-        SystemAClient _systemAClient;
-        SystemBClient _systemBClient;
+        readonly ISystemAClient _systemAClient;
+        readonly ISystemBClient _systemBClient;
         ILogger<CustomersService> _logger;
-        public CustomersService(SystemAClient systemAClient, SystemBClient systemBClient, ILogger<CustomersService> logger)
+        private readonly IMemoryCache _cache;
+        public CustomersService(ISystemAClient systemAClient, ISystemBClient systemBClient,
+        ILogger<CustomersService> logger, IMemoryCache cache)
         {
             _systemAClient = systemAClient;
             _systemBClient = systemBClient;
             _logger = logger;
+            _cache = cache;
         }
 
         public async Task<UnifiedCustomerRecord?> GetUnifiedCustomerByEmailAsync(string email)
         {
             _logger.LogInformation("[MergeService] Getting customer by email: {Email}", email);
-            
+            // Check cache first
+            if (_cache.TryGetValue(email, out UnifiedCustomerRecord? cached))
+            {
+                _logger.LogInformation("[MergeService] Cache hit for {Email}", email);
+                return cached;
+            }
             SystemACustomer? systemACustomer = await _systemAClient.GetByEmailAsync<SystemACustomer>(email);
             SystemBCustomer? systemBCustomer = null;
             bool systemBUnavailable = false;
@@ -40,16 +47,27 @@ namespace MergeService.Services
 
             // Both systems have data
             if (systemACustomer != null && systemBCustomer != null)
-                return MergeFromBoth(systemACustomer, systemBCustomer);
+            {
+                var result = MergeFromBoth(systemACustomer, systemBCustomer);
+                _cache.Set(email, result, TimeSpan.FromMinutes(5));
+                return result;
+            }
 
             // Only System A
             if (systemACustomer != null)
-                return MergeFromSystemA(systemACustomer, isPartial: systemBUnavailable);
+            {
+                var result = MergeFromSystemA(systemACustomer, isPartial: systemBUnavailable);
+                _cache.Set(email, result, TimeSpan.FromMinutes(5));
+                 return result;
+            }
 
             // Only System B
             if (systemBCustomer != null)
-                return MergeFromSystemB(systemBCustomer, false);
-
+            {
+                var result = MergeFromSystemB(systemBCustomer, isPartial: false);
+                _cache.Set(email, result, TimeSpan.FromMinutes(5));
+                return result;
+            }
             return null;
         }
 

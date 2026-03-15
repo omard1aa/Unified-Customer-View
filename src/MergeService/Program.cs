@@ -8,16 +8,17 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddHttpClient<SystemAClient>(c =>
+builder.Services.AddHttpClient<ISystemAClient, SystemAClient>(c =>
     c.BaseAddress = new Uri(builder.Configuration["APIs:SystemA:BaseUrl"]!));
 
-builder.Services.AddHttpClient<SystemBClient>(c =>
+builder.Services.AddHttpClient<ISystemBClient, SystemBClient>(c =>
 {
     c.BaseAddress = new Uri(builder.Configuration["APIs:SystemB:BaseUrl"]!);
     c.Timeout = TimeSpan.FromSeconds(3);
 });
 
 builder.Services.AddScoped<ICustomerService, CustomersService>();
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 

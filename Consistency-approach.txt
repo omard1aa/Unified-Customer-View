@@ -1,0 +1,20 @@
+    Strong consistency through 2PC ensures both systems agree on every change before it's committed: no data conflicts.
+    However, this requires both systems to be available while executing the commit. Since System B is an external platform with known availability issues, 2PC would fail every update when B is down. This makes 2PC impractical for this scenario.
+    
+    With eventual consistency, both systems update independently. Conflicts are detected after the fact and handled asynchronously. This means we accept unknown timeframe where the systems may disagree — but we gain resilience, availability, and independence between systems. Neither system blocks the other.
+    In this case we may need event driven architecture to publish an event to a massage broker (Kafka) after update completes, 
+    on the otherhand the deletgated service subscribes to that topic, recieves the event and executes the logic which is in this case update the other record in System A and deleting that record from the cache
+
+    Using the eventual consistency the expected flow would be:
+        - Customer updates address in System B
+        - System B publishes event: "CustomerUpdated: max@example.de"
+        - Message broker receives the event
+        - MergeService subscribed and receives the event
+        - MergeService removes max@example.de from cache immediately
+        - Next request for max, cache will miss data, the the request will fetch from live db
+
+
+    For this service, Eventual consistency is the right choice because this service is read-only — we don't write to either system. We observe, merge, and report. When conflicts are detected, they're surfaced through the sync endpoint rather than automatically resolved.
+
+    In production, when the sync endpoint detects a conflict, it would publish a ConflictDetected event to Kafka containing the email, conflicting field name, both system values, timestamps, and which system is newer
+        

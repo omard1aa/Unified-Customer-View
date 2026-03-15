@@ -34,6 +34,12 @@ namespace MergeService.Controllers
         public async Task<IActionResult> Health()
         {
             var (systemA, systemB) = await service.IsHealthyAsync();
+            if(!systemA && !systemB)
+                return StatusCode(503, "Both System A and System B are unavailable.");
+            if(!systemA)
+                return StatusCode(503, "System A is unavailable.");
+            if(!systemB)
+                return StatusCode(503, "System B is unavailable.");
             return Ok(new { SystemA = systemA, SystemB = systemB });
         }
     }

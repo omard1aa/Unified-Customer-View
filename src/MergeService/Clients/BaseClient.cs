@@ -1,9 +1,10 @@
 using System.Net.Http.Json;
+using MergeService.Interfaces;
 using MergeService.Models;
 
 namespace MergeService.Clients
 {
-    public abstract class BaseClient(HttpClient httpClient)
+    public abstract class BaseClient(HttpClient httpClient) : IDataSourceClient
     {
         protected readonly HttpClient Http = httpClient;
 

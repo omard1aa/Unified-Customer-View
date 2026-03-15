@@ -9,8 +9,7 @@ namespace MergeService.Tests
 
         public CustomersServiceTests()
         {
-            // Pass nulls for HTTP clients and logger — we're testing pure merge logic only
-            _service = new CustomersService(null!, null!, null!);
+            _service = new CustomersService(null!, null!, null!, null!);
         }
 
         // ─── Helpers ────────────────────────────────────────────────────────────────
