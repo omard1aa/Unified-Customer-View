@@ -72,7 +72,7 @@ Metadata[Metadata Generator<br>Source Tracking + Conflict Detection]
 
 Response[Unified Customer Response]
 
-DiffEngine[Conflict Diff Engine<br>/customer/sync]
+DiffEngine[Merge Service<br>/customer/sync]
 
 %% Normal GET flow
 Client --> API
