@@ -8,7 +8,7 @@ To address this, we introduce a Merge Service that aggregates and combine data f
 The system also includes conflict detection with provenance tracking to record the origin of each field.
 
 ## Architecture
-[Brief summary + link to the ADR document for details]
+ADR in ADR.md
 
 ## Tech Stack
 - .Net Core: Merge service 
