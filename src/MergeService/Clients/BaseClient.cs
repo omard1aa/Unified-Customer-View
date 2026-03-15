@@ -18,7 +18,7 @@ namespace MergeService.Clients
         public async Task<List<T>> SearchAsync<T>(string query) where T : class
         {
             return await Http.GetFromJsonAsync<List<T>>(
-                $"api/customers/search?q={Uri.EscapeDataString(query)}") ?? [];
+                $"api/customers/search?query={Uri.EscapeDataString(query)}") ?? [];
         }
 
         public async Task<bool> IsHealthyAsync()

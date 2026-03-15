@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MergeService")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9c08e028899caba6de7cb58223bc442b34d441dc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2b6ec93194576493fe9a1bc573da999d662e2a3e")]
 [assembly: System.Reflection.AssemblyProductAttribute("MergeService")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MergeService")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

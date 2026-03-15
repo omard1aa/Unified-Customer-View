@@ -25,7 +25,6 @@ namespace SystemA.Repositories
             try
             {
                 return await db.Database.CanConnectAsync();
-                
             }
             catch (Exception ex)
             {

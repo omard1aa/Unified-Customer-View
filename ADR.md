@@ -52,6 +52,8 @@ Merge Service
 Unified Customer Response + Metadata
 
 #### Diagram
+
+```mermaid
 flowchart TD
 
 Client[Client Application]
@@ -96,6 +98,7 @@ Metadata --> Cache
 API --> DiffEngine
 DiffEngine --> ARepo
 DiffEngine --> BClient
+```
 
 ### Entity Resolution Strategy
 

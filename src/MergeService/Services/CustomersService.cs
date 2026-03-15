@@ -16,6 +16,7 @@ namespace MergeService.Services
             _systemBClient = systemBClient;
             _logger = logger;
         }
+
         public async Task<UnifiedCustomerRecord?> GetUnifiedCustomerByEmailAsync(string email)
         {
             _logger.LogInformation("[MergeService] Getting customer by email: {Email}", email);
@@ -52,6 +53,135 @@ namespace MergeService.Services
             return null;
         }
 
+        public async Task<List<UnifiedCustomerRecord>> SearchAsync(string query)
+        {
+            // For simplicity, we will search in both systems and return the first match found, in real scenario we might want to return multiple results with relevance score
+            List<SystemACustomer>? systemACustomers = await _systemAClient.SearchAsync<SystemACustomer>(query);
+            List<SystemBCustomer>? systemBCustomers = null;
+            List<UnifiedCustomerRecord> mergedCustomers = new List<UnifiedCustomerRecord>();
+            bool systemBUnavailable = false;
+            try
+            {
+                systemBCustomers = await _systemBClient.SearchAsync<SystemBCustomer>(query);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[MergeService] SystemB unavailable for {query}", query);
+                systemBUnavailable = true;
+            }
+
+            // Neither system has this customer
+            if (systemACustomers.Count == 0  && systemBCustomers?.Count == 0 && !systemBUnavailable)
+                return new List<UnifiedCustomerRecord>();
+
+            // convert the lists to dictionary (email, customerRecord)
+            var systemARecordsDict = (systemACustomers ?? new List<SystemACustomer>()).Where(c => c.email != null).ToDictionary(c => c.email!, c => c);
+            var systemBRecordsDict = (systemBCustomers ?? new List<SystemBCustomer>()).Where(c => c.email != null).ToDictionary(c => c.email!, c => c);
+            
+            var distinctEmails = new HashSet<string>(systemARecordsDict.Keys);
+            distinctEmails.UnionWith(systemBRecordsDict.Keys);
+
+            foreach(var email in distinctEmails)
+            {
+                systemARecordsDict.TryGetValue(email, out var systemARecord);
+                systemBRecordsDict.TryGetValue(email, out var systemBRecord);
+
+                if(systemARecord != null && systemBRecord != null)
+                {
+                    mergedCustomers.Add(MergeFromBoth(systemARecord, systemBRecord));
+                }
+                else if(systemARecord != null)
+                {
+                    mergedCustomers.Add(MergeFromSystemA(systemARecord, isPartial: systemBUnavailable));
+                }
+                else if(systemBRecord != null)
+                {
+                    mergedCustomers.Add(MergeFromSystemB(systemBRecord, isPartial: false));
+                }
+            }
+            return mergedCustomers;
+        }
+
+        public async Task<SyncRecord> Sync(string email)
+        {
+            SystemACustomer? systemACustomer = await _systemAClient.GetByEmailAsync<SystemACustomer>(email);
+            SystemBCustomer? systemBCustomer = null;
+            var syncedRecord = new SyncRecord();
+            try
+            {
+                systemBCustomer = await _systemBClient.GetByEmailAsync<SystemBCustomer>(email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[MergeService] SystemB unavailable for {Email}", email);
+                return new SyncRecord { Email = email, Status = "system_b_unavailable" };
+            }
+            if (systemACustomer == null && systemBCustomer == null)
+                return new SyncRecord { Email = email, Status = "not_found" };
+            if (systemACustomer != null && systemBCustomer == null)
+                return new SyncRecord { Email = email, Status = "only_in_a" };
+            if (systemACustomer == null && systemBCustomer != null)
+                return new SyncRecord { Email = email, Status = "only_in_b" };
+
+            return SyncBothSystems(systemACustomer!, systemBCustomer!);
+        }
+
+        public async Task<(bool SystemA, bool SystemB)> IsHealthyAsync()
+        {
+            bool systemAHealthy;
+            bool systemBHealthy;
+            try
+            {
+                systemAHealthy = await _systemAClient.IsHealthyAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[MergeService] SystemA health check failed.");
+                systemAHealthy = false;
+            }
+            try
+            {
+                systemBHealthy = await _systemBClient.IsHealthyAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[MergeService] SystemB health check failed.");
+                systemBHealthy = false;
+            }
+            return (systemAHealthy, systemBHealthy);
+        }
+
+        // Helper functions start from here
+        public SyncRecord SyncBothSystems(SystemACustomer systemACustomer, SystemBCustomer systemBCustomer)
+        {            
+            var mergedRecord = MergeFromBoth(systemACustomer, systemBCustomer);
+            var syncedRecord = new SyncRecord();
+            syncedRecord.Fields = new Dictionary<string, Report>();
+            syncedRecord.Email = mergedRecord.email;
+            syncedRecord.Status = "Not_Conflicted";
+            syncedRecord.NewerSource = systemACustomer.last_updated > systemBCustomer.last_updated ? "SystemA" : "SystemB";
+            syncedRecord.Fields["name"] = new Report { SystemAValue = systemACustomer.name, SystemBValue = systemBCustomer.name, Status = "match" };
+            syncedRecord.Fields["phone"] = new Report { SystemAValue = null, SystemBValue = systemBCustomer.phone, Status = "only_in_b" };
+            syncedRecord.Fields["contractStartDate"] = new Report { SystemAValue = systemACustomer.ContractStartDate?.ToString(), SystemBValue = null, Status = "only_in_a" };
+            syncedRecord.Fields["contractType"] = new Report { SystemAValue = systemACustomer.ContractType, SystemBValue = null, Status = "only_in_a" };
+            syncedRecord.Fields["address"] = new Report { SystemAValue = systemACustomer.address, SystemBValue = systemBCustomer.address, Status = "match" };
+            if (mergedRecord != null && mergedRecord.Metadata != null && mergedRecord.Metadata.conflicts != null)
+            {
+                foreach(var conflict in mergedRecord.Metadata.conflicts)
+                {
+                    var fieldName = conflict["field"];
+                    syncedRecord.Fields[fieldName] = new Report
+                    {
+                        SystemAValue = conflict["systemAValue"],
+                        SystemBValue = conflict["systemBValue"],
+                        Status = conflict["resolvedFrom"],
+                    };
+                    syncedRecord.Status = "Conflicted";
+                }
+            }
+            return syncedRecord;
+        }
+        
         public UnifiedCustomerRecord MergeFromSystemA(SystemACustomer systemACustomer, bool isPartial)
         {
             var mergedCustomerRecord = new UnifiedCustomerRecord()
@@ -170,6 +300,7 @@ namespace MergeService.Services
             mergedCustomerRecord.Metadata.isPartial = false;
             return mergedCustomerRecord;
         }
+        
         /*
          For the Conflict Creation methods, we can have enhancement here, make it generic: CreateConflict()
          and we pass the conflicted field name, at this moment we would need priority rules engine to determine the resolved value, 

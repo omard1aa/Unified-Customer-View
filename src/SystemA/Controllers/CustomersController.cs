@@ -16,9 +16,9 @@ namespace SystemA.Controllers
         }
 
         [HttpGet("search")]
-        public async Task<IActionResult> Search([FromQuery] string q)
+        public async Task<IActionResult> Search([FromQuery] string query)
         {
-            var results = await service.SearchAsync(q);
+            var results = await service.SearchAsync(query);
             return Ok(results);
         }
 
