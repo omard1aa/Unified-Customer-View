@@ -1,0 +1,93 @@
+{
+  "info": {
+    "_postman_id": "029f05c0-4109-45d7-b9ef-22601368f074",
+    "name": "UnifiedCustomerView",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "4833758"
+  },
+  "item": [
+    {
+      "name": "Sync",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/customers/search?q=max.mustermann@example.de",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "customers",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "max.mustermann@example.de"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Search Query with max Copy",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/customers/search?q=max.mustermann@example.de",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "customers",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "max.mustermann@example.de"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get By Email",
+      "request": {
+        "method": "GET",
+        "header": []
+      },
+      "response": []
+    },
+    {
+      "name": "Check Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/customers/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "customers",
+            "health"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
