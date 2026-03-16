@@ -28,12 +28,16 @@ namespace MergeService.Services
                 _logger.LogInformation("[MergeService] Cache hit for {Email}", email);
                 return cached;
             }
-            SystemACustomer? systemACustomer = await _systemAClient.GetByEmailAsync<SystemACustomer>(email);
+
+            var systemATask =  _systemAClient.GetByEmailAsync<SystemACustomer>(email);
+            var systemBTask = _systemBClient.GetByEmailAsync<SystemBCustomer>(email);
+            SystemACustomer? systemACustomer = await systemATask;
             SystemBCustomer? systemBCustomer = null;
+            
             bool systemBUnavailable = false;
             try
             {
-                systemBCustomer = await _systemBClient.GetByEmailAsync<SystemBCustomer>(email);
+                systemBCustomer = await systemBTask;
             }
             catch (Exception ex)
             {
